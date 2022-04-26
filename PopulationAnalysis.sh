@@ -771,47 +771,5 @@ bcftools convert --hapsample --vcf-ids latinos.vcf -o latinos.haplotypes.vcf
 
 
 
-#####======================== ascertainment bias ================================
-##  Try to thin to Axiom GenomeWide Human Origins (Axiom GW HuOrigin)
-### Get bed file for Axiom in http://www.affymetrix.com/Auth/analysis/downloads/na35/genotyping/Axiom_GW_HuOrigin.na35.bed.zip
-##=======================================================
-##=======================================================
-
-# Get BED file from markers in Galina 6.0 + 5.0 merge (unfiltered)
-awk '{ print "chr"$1"\t"$4"\t"$4}' ~/Dropbox/paperultima/BRn171-nam-eur-afr-amr.ordered.bim > ~/Dropbox/paperultima/ascertainment/affy.to.intersect.txt
-
-# BED intersect with Axiom GWHO - it yields 101035 common markers
-bedtools intersect -a Axiom_GW_HuOrigin.na35.bed -b affy.tp.intersect.txt -wo > common.txt
-
-
-## trying to install ANGSD
-# not working
-make HTSSRC=/usr/local/Cellar/htslib/1.14/lib  CFLAGS="-L/usr/local/opt/openssl/lib -I/usr/local/opt/openssl/include"
-
-
-## Ok, getting BR samples to calculate SFS by 2 methods
-# Trying the already annotated file:
-#bcftools view -S ~/Dropbox/input_chr16/Pops/BR.txt  /Volumes/PEDRO\ 70GB/Genetics/ALLinfo/VCFinfo/ALL.vcf > BR.to.SFS.INFO.vcf # this yields 300,261 markers, it underwent some filtering I cannot recall right now, I will chose the approach below
-
-# 302,369 markers, greater chance of getting a better SFS estimate, I will keep this
-plink --bfile  ~/Dropbox/paperultima/BRn171-nam-eur-afr-amr.ordered --keep ~/Dropbox/input_chr16/Pops/BR --recode-vcf --out BR.to.SFS 
-
-# concat reference 1kG files
-concat --file-list ~/Dropbox/paperultima/ascertainment/vcfs.to.merge.txt | bcftools norm -d all -o ALL.concat.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf
-
-## So now I have to annotate the above vcf file
-vcfaddinfo BR.to.SFS  ALL.chr1  .phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf > BR.to.SFS.ADDINFO  
-
-
-## Get a nice list of ancestral alleles
-grep -v "^#" | awk ' { print $3 "\t"  $8 }' BR.to.SFS.INFO.vcf | cut -d'|' -f1 | sed 's/AA=//g' > ancestral_snps.txt
-
-
-cat plink.frq.counts.txt | sed 's/  */  /g' > plink.frq.counts.xls
-
-
-
-
-
 
 ##=======================================================
