@@ -739,6 +739,94 @@ for i in $(ls *.log); do grep "Scan" $i && echo $i  ; done
 
 # Plot with the roh.R scipt
 
+####========================= ROH analysis =================================
+##=======================================================
+##=======================================================
+#####========================================================================
+cat /home/krotik/Dropbox/2019_AdditionalAnalysis/1000_tmp/plink_format/*/*.thin4.snps.diffenence.snplist /home/krotik/Dropbox/2019_AdditionalAnalysis/all_BR/BR_n171.thin4.snps.diffenence.snplist | awk '!seen[$0]++' > /home/krotik/Dropbox/2019_AdditionalAnalysis/1000_tmp/thin4.snps.diffenence.snplist
+
+## Remove the last list from all the populations
+for pop in ${P[@]} NAM; do \
+./plink --bfile /home/krotik/Dropbox/2019_AdditionalAnalysis/1000_tmp/plink_format/$pop/$pop.thin4 \
+        --exclude /home/krotik/Dropbox/2019_AdditionalAnalysis/1000_tmp/thin4.snps.diffenence.snplist \
+        --make-bed \
+        --out /home/krotik/Dropbox/2019_AdditionalAnalysis/1000_tmp/plink_format/$pop/$pop.thin5; \
+done
+
+## Do this for the Brazilian population
+
+./plink --bfile /home/krotik/Dropbox/2019_AdditionalAnalysis/all_BR/BR_n171.thin4 \
+        --exclude /home/krotik/Dropbox/2019_AdditionalAnalysis/1000_tmp/thin4.snps.diffenence.snplist \
+        --make-bed \
+        --out /home/krotik/Dropbox/2019_AdditionalAnalysis/all_BR/BR_n171.thin5
+
+##=======================================================
+## Remove known long range LD regions from all the populations
+##=======================================================
+
+for pop in ${P[@]} NAM; do \
+./plink --bfile /home/krotik/Dropbox/2019_AdditionalAnalysis/1000_tmp/plink_format/$pop/$pop.thin5 \
+        --exclude range /home/krotik/Dropbox/2019_AdditionalAnalysis/highld-range.list \
+        --make-bed \
+        --out /home/krotik/Dropbox/2019_AdditionalAnalysis/1000_tmp/plink_format/$pop/$pop.thin6; \
+done
+
+./plink --bfile /home/krotik/Dropbox/2019_AdditionalAnalysis/all_BR/BR_n171.thin5 \
+        --exclude range /home/krotik/Dropbox/2019_AdditionalAnalysis/highld-range.list \
+        --make-bed \
+        --out /home/krotik/Dropbox/2019_AdditionalAnalysis/all_BR/BR_n171.thin6
+
+## 192987 variants
+
+##=======================================================
+## ROH analysis
+##=======================================================
+
+## Brazilian
+./plink --bfile /home/krotik/Dropbox/2019_AdditionalAnalysis/all_BR/BR_n171.thin6 \
+        --homozyg \
+        --homozyg-snp 50 \
+        --homozyg-kb 300 \
+        --homozyg-group \
+        --out /home/krotik/Dropbox/2019_AdditionalAnalysis/all_BR/BR_n171.thin6.ROHs
+
+## All Others
+for pop in ${P[@]} NAM; do \
+./plink --bfile /home/krotik/Dropbox/2019_AdditionalAnalysis/1000_tmp/plink_format/$pop/$pop.thin6 \
+        --homozyg \
+        --homozyg-snp 50 \
+        --homozyg-kb 300 \
+        --homozyg-group \
+        --out /home/krotik/Dropbox/2019_AdditionalAnalysis/1000_tmp/plink_format/$pop/$pop.thin6.ROHs; \
+done
+
+##=======================================================
+## II - ROH analysis
+## By default, a ROH can contain an unlimited number of heterozygous calls; 
+## you can impose a limit with --homozyg-het
+##=======================================================
+
+## Brazilian
+./plink --bfile /home/krotik/Dropbox/2019_AdditionalAnalysis/all_BR/BR_n171.thin6 \
+        --homozyg \
+        --homozyg-snp 50 \
+        --homozyg-kb 300 \
+        --homozyg-group \
+        --homozyg-het 1\
+        --out /home/krotik/Dropbox/2019_AdditionalAnalysis/all_BR/BR_n171.thin6.300kb.ROHs.2
+
+## All Others
+for pop in ${P[@]} NAM; do \
+./plink --bfile /home/krotik/Dropbox/2019_AdditionalAnalysis/1000_tmp/plink_format/$pop/$pop.thin6 \
+        --homozyg \
+        --homozyg-snp 50 \
+        --homozyg-kb 300 \
+        --homozyg-group \
+        --out /home/krotik/Dropbox/2019_AdditionalAnalysis/1000_tmp/plink_format/$pop/$pop.thin6.300kb.ROHs.2; \
+done
+
+##=======================================================
+
 
 ##=======================================================
 
