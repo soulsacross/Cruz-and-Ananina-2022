@@ -1,0 +1,132 @@
+// Latinos, recessive mutations, no inbreeding
+initialize() {
+	defineConstant("simID", getSeed());
+	initializeSLiMOptions(keepPedigrees=T);
+	
+	defineConstant("seqLength", 10000000);
+	defineConstant("Lns_over_Ls", 2.31);
+	defineConstant("ROHcutoff", 1000000);
+	defineConstant("simScalFac", 1);
+	defineConstant("sampleSize", 60);
+
+	initializeMutationRate(1.5e-8*simScalFac);
+	initializeRecombinationRate(1e-8*simScalFac);
+	
+	// m1 mutation type: neutral
+	initializeMutationType("m1", 0.5, "f", 0.0);
+	initializeMutationType("m2", 0.5/5, "g", -0.028*simScalFac*5, 0.19);
+	
+	m2.convertToSubstitution = T;
+	
+	// g1 genomic element type: uses m1 for all mutations
+	initializeGenomicElementType("g1", c(m1, m2), c(1,Lns_over_Ls));
+	initializeGenomicElementType("g2", m1, 1);
+	initializeGenomicElementType("g3", m1, 1);
+	
+	// Generate random genes along the chromosome
+	base = 0;
+	nc_length_total = 0;
+	in_length_total = 0;
+	ex_length_total = 0;
+	while (base < seqLength) {
+		// make a non-coding region
+		nc_length = asInteger(runif(1, 100, 5000)); nc_length_total = nc_length_total + nc_length;
+		initializeGenomicElement(g2, base, base + nc_length - 1);
+		base = base + nc_length;
+		// make first exon
+		ex_length = asInteger(rlnorm(1, log(50), log(2))) + 1; ex_length_total = ex_length_total + ex_length;
+		initializeGenomicElement(g1, base, base + ex_length - 1);
+		base = base + ex_length;
+		// make additional intron-exon pairs
+		do {
+			in_length = asInteger(rlnorm(1, log(100), log(1.5))) + 10; in_length_total = in_length_total + in_length;
+			initializeGenomicElement(g3, base, base + in_length - 1);
+			base = base + in_length;
+			ex_length = asInteger(rlnorm(1, log(50), log(2))) + 1; ex_length_total = ex_length_total + ex_length;
+			initializeGenomicElement(g1, base, base + ex_length - 1);
+			base = base + ex_length;
+		} while (runif(1) < 0.8); // 20% probability of stopping
+	}
+	// final non-coding region
+	nc_length = asInteger(runif(1, 100, 5000));
+	initializeGenomicElement(g2, base, base + nc_length - 1);
+
+	
+	// define some constants that will be used later for calculating summary statistics
+	defineConstant("in_length_total_c", in_length_total);
+	defineConstant("ex_length_total_c", ex_length_total);
+	defineConstant("nc_length_total_c", nc_length_total);
+}
+	
+//Native Americans 
+//1 {
+//	cat("# gen popSize sampleSize mutLoad mutLoadFixed fitness numNeutral numNS numFixedNS Pneutral PNS meanTotalROH NeutralInROH NSInROH NeutralNotInROH NSNotInROH F" + "\n");
+//	// save this run's identifier, used to save and restore
+//	sim.addSubpop("p1", 10000);
+//		
+//	sim.tag = 0;
+//}
+	
+
+// read from previous population in mutation-drift equilibrium 
+1 late() { sim.readFromPopulationFile("~/Desktop/SLiM_models/slim_1828862244121.txt");
+           }
+70000 {
+	m2.convertToSubstitution = F; 
+	p1.setSubpopulationSize(2000);  // This is OOA bottleneck (50kya)
+}
+
+70167 {
+	sim.addSubpopSplit("p2", 2000, p1);  
+}
+
+70834 {
+	p2.setSubpopulationSize(10000);
+}
+
+71500 {
+	p1.setSubpopulationSize(10000);
+}
+
+71650 {
+	p1.setSubpopulationSize(100);    // Bottleneck - European arrival, 510 yrs/17 gen. ago
+}
+
+71651 {
+	p1.setMigrationRates(p2, 0.7);   // Admixture (70% EUR) 480 yrs/16 gen. ago 
+}
+
+71652 {
+	p1.setMigrationRates(p2, 0.0);
+   p1.setSelfingRate(0.182);   // Start inbreeding by selfing...
+}
+
+ 71652:71667 mateChoice() {   // Inbreeding with 70% probability
+ 	if (runif(1) < 0.70) {
+ 		return weights * ifelse(individual.relatedness(sourceSubpop.individuals) >= 0.25 & individual.relatedness(sourceSubpop.individuals) != 1.0 , 1.0 , 0.00001);
+ 	}
+ 	else {
+ 		return weights;
+ 	}
+ }
+
+71653 {
+	p2.setSubpopulationSize(0); 
+}
+
+//71660 {
+//	p1.setSubpopulationSize(10000);   // Recover from bottleneck 210 yrs / 7 geg. ago
+//	// p1.setSelfingRate(0);   // Stop inbreeding by selfing...?
+//}
+
+71664 {
+	p1.setSubpopulationSize(10000);   // Recover from bottleneck 210 yrs / 7 geg. ago
+	// p1.setSelfingRate(0);   // Stop inbreeding by selfing...?
+}
+
+
+71667 {sim.simulationFinished();}
+
+// 66666 late() { p1.outputVCFSample(80); }
+71666 late() { sim.outputFull("slim_" + simID + ".txt"); }
+71667 late() { p1.outputVCFSample(10000, filePath ="/Users/Pedro/Dropbox/paperultima/Simulation/Latinos_Bottleck100_inbreed70_9.vcf"); }
